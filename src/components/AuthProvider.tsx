@@ -12,6 +12,7 @@ interface User {
 interface AuthState {
   user: User | null;
   loading: boolean;
+  getToken: () => string | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   register: (email: string, password: string, username: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -20,6 +21,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
+  getToken: () => null,
   login: async () => ({ ok: false }),
   register: async () => ({ ok: false }),
   logout: async () => {},
@@ -145,6 +147,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const getToken = useCallback((): string | null => {
+    const stored = getStoredSession();
+    return stored?.access_token || null;
+  }, []);
+
   const logout = useCallback(async () => {
     const stored = getStoredSession();
     if (stored?.access_token) {
@@ -158,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, getToken, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

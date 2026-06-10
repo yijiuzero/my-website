@@ -89,6 +89,39 @@ function UserMenu() {
   );
 }
 
+function NavLinks() {
+  const { user } = useAuth();
+  return (
+    <nav className="flex items-center gap-1">
+      <Link
+        href="/"
+        className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
+        style={{ color: "var(--fg-secondary)" }}
+      >
+        首页
+      </Link>
+      <Link
+        href="/articles"
+        className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
+        style={{ color: "var(--fg-secondary)" }}
+      >
+        日志
+      </Link>
+      {user && (
+        <Link
+          href="/articles/new"
+          className="nav-link px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+          style={{ color: "var(--accent)" }}
+        >
+          写文章
+        </Link>
+      )}
+      <ThemeToggle />
+      <UserMenu />
+    </nav>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
@@ -117,24 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               零号站台
             </Link>
-            <nav className="flex items-center gap-1">
-              <Link
-                href="/"
-                className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
-                style={{ color: "var(--fg-secondary)" }}
-              >
-                首页
-              </Link>
-              <Link
-                href="/articles"
-                className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
-                style={{ color: "var(--fg-secondary)" }}
-              >
-                日志
-              </Link>
-              <ThemeToggle />
-              <UserMenu />
-            </nav>
+            <NavLinks />
           </div>
         </header>
 
