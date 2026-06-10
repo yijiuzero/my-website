@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "站长之家 - 个人网站收藏与分享",
-  description: "分享优质网站，记录技术文章，连接同好站长的社区",
+  title: "零号站台 · Platform Zero",
+  description: "一个互联网上的落脚处。记录、分享、连接。",
 };
 
 export default function RootLayout({
@@ -26,22 +27,86 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-zinc-50">
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-zinc-200">
-          <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-6">
-            <Link href="/" className="font-bold text-lg text-zinc-900 hover:text-zinc-600 transition-colors">
-              🏠 站长之家
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  } else if (theme === 'light') {
+                    document.documentElement.classList.add('light');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body
+        className="min-h-screen flex flex-col antialiased"
+        style={{
+          backgroundColor: "var(--bg)",
+          color: "var(--fg)",
+        }}
+      >
+        {/* ── 导航 ── */}
+        <header
+          className="sticky top-0 z-50 border-b"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--bg) 80%, transparent)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderColor: "var(--border)",
+          }}
+        >
+          <div className="max-w-4xl mx-auto px-5 h-14 flex items-center justify-between">
+            <Link
+              href="/"
+              className="font-bold text-base tracking-tight hover:opacity-70 transition-opacity"
+              style={{ color: "var(--fg)" }}
+            >
+              零号站台
             </Link>
-            <nav className="flex gap-4 text-sm text-zinc-600">
-              <Link href="/" className="hover:text-zinc-900 transition-colors">首页</Link>
+            <nav className="flex items-center gap-1">
+              <Link
+                href="/"
+                className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ color: "var(--fg-secondary)" }}
+              >
+                首页
+              </Link>
+              <Link
+                href="/articles"
+                className="nav-link px-3 py-1.5 rounded-md text-sm transition-colors"
+                style={{ color: "var(--fg-secondary)" }}
+              >
+                日志
+              </Link>
+              <ThemeToggle />
             </nav>
           </div>
         </header>
+
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-zinc-200 bg-white py-6 text-center text-sm text-zinc-500">
-          站长之家 &copy; {new Date().getFullYear()} · 连接每一个站长
+
+        {/* ── 底部 ── */}
+        <footer
+          className="border-t py-8 text-center text-sm"
+          style={{
+            borderColor: "var(--border)",
+            color: "var(--fg-muted)",
+          }}
+        >
+          <div className="max-w-4xl mx-auto px-5">
+            <p className="mb-1">零号站台 &copy; {new Date().getFullYear()}</p>
+            <p>互联网上的一个小小落脚处</p>
+          </div>
         </footer>
       </body>
     </html>

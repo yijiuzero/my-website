@@ -10,7 +10,22 @@ const headers = {
   "Content-Type": "application/json",
 };
 
-async function getArticle(id: string) {
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  category: string | null;
+  created_at: string;
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  author_name: string | null;
+  created_at: string;
+}
+
+async function getArticle(id: string): Promise<Article | null> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   try {
     const res = await fetch(
@@ -24,7 +39,7 @@ async function getArticle(id: string) {
   }
 }
 
-async function getComments(articleId: string) {
+async function getComments(articleId: string): Promise<Comment[]> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
   try {
     const res = await fetch(
@@ -36,6 +51,33 @@ async function getComments(articleId: string) {
     return [];
   }
 }
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function estimateReadTime(content: string): number {
+  const chars = content.replace(/\s/g, "").length;
+  return Math.max(1, Math.ceil(chars / 500));
+}
+
+const categoryLabel: Record<string, string> = {
+  tech: "技术",
+  life: "生活",
+  travel: "旅行",
+  essay: "随笔",
+};
 
 export default async function ArticlePage({
   params,
@@ -50,54 +92,151 @@ export default async function ArticlePage({
   }
 
   const comments = await getComments(id);
+  const readTime = estimateReadTime(article.content || "");
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* 面包屑 */}
-      <Link
-        href="/"
-        className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors mb-6 inline-block"
-      >
-        ← 返回首页
-      </Link>
+    <div className="max-w-3xl mx-auto px-5 py-8 md:py-12">
+      {/* ── 返回 ── */}
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="nav-link inline-flex items-center gap-1.5 text-sm transition-colors"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          返回站台
+        </Link>
+      </div>
 
-      {/* 文章内容 */}
-      <article className="bg-white rounded-xl border border-zinc-200 p-8 mb-8">
-        <h1 className="text-3xl font-bold text-zinc-900 mb-4">{article.title}</h1>
+      {/* ── 文章 ── */}
+      <article>
+        {/* 元信息 */}
+        <div className="mb-8">
+          {article.category && categoryLabel[article.category] && (
+            <span
+              className="inline-block text-xs px-2.5 py-0.5 rounded-full font-medium mb-3"
+              style={{
+                backgroundColor: "var(--accent-soft)",
+                color: "var(--accent)",
+              }}
+            >
+              {categoryLabel[article.category]}
+            </span>
+          )}
+          <h1
+            className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight mb-4 leading-tight"
+            style={{ color: "var(--fg)" }}
+          >
+            {article.title}
+          </h1>
+          <div
+            className="flex items-center gap-3 text-sm"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            <time>{formatDate(article.created_at)}</time>
+            <span style={{ color: "var(--border)" }}>·</span>
+            <span>{readTime} 分钟阅读</span>
+          </div>
+        </div>
 
-        <time className="text-sm text-zinc-400 block mb-6">
-          {new Date(article.created_at).toLocaleDateString("zh-CN")}
-        </time>
-
-        <div className="prose prose-zinc max-w-none whitespace-pre-wrap leading-relaxed text-zinc-700">
-          {article.content || "（暂无内容）"}
+        {/* 正文 */}
+        <div
+          className="prose-station pb-8 mb-8"
+          style={{ borderBottom: `1px solid var(--border)` }}
+        >
+          {article.content ? (
+            article.content.split("\n").map((line, i) => {
+              if (line.trim() === "") {
+                return <div key={i} className="h-3" />;
+              }
+              // 简单标题检测
+              if (line.startsWith("## ")) {
+                return (
+                  <h2 key={i}>{line.replace("## ", "")}</h2>
+                );
+              }
+              if (line.startsWith("### ")) {
+                return (
+                  <h3 key={i}>{line.replace("### ", "")}</h3>
+                );
+              }
+              return <p key={i}>{line}</p>;
+            })
+          ) : (
+            <p style={{ color: "var(--fg-muted)" }}>暂无内容</p>
+          )}
         </div>
       </article>
 
-      {/* 评论区 */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-8">
-        <h2 className="text-xl font-bold text-zinc-900 mb-6">
-          💬 评论 ({comments.length})
+      {/* ── 评论区 ── */}
+      <section>
+        <h2
+          className="text-lg font-semibold mb-6"
+          style={{ color: "var(--fg)" }}
+        >
+          评论 ({comments.length})
         </h2>
 
         {comments.length === 0 ? (
-          <p className="text-zinc-400 text-sm">暂无评论，来说点什么吧</p>
+          <div
+            className="rounded-xl border p-8 text-center"
+            style={{
+              borderColor: "var(--border)",
+              backgroundColor: "var(--surface)",
+            }}
+          >
+            <p style={{ color: "var(--fg-muted)", fontSize: "0.875rem" }}>
+              还没有评论，说点什么吧
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
-            {comments.map((comment: any) => (
+            {comments.map((comment) => (
               <div
                 key={comment.id}
-                className="border-b border-zinc-100 pb-4 last:border-0 last:pb-0"
+                className="rounded-xl border p-5"
+                style={{
+                  borderColor: "var(--border)",
+                  backgroundColor: "var(--surface)",
+                }}
               >
-                <p className="text-zinc-700 leading-relaxed">{comment.content}</p>
-                <time className="text-xs text-zinc-400 mt-2 block">
-                  {new Date(comment.created_at).toLocaleDateString("zh-CN")}
-                </time>
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                    style={{
+                      backgroundColor: "var(--accent-soft)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {(comment.author_name || "匿").charAt(0)}
+                  </div>
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "var(--fg)" }}
+                  >
+                    {comment.author_name || "匿名"}
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{ color: "var(--fg-dim)" }}
+                  >
+                    {formatTime(comment.created_at)}
+                  </span>
+                </div>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "var(--fg-secondary)" }}
+                >
+                  {comment.content}
+                </p>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
