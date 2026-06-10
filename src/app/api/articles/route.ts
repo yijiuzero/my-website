@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const accessToken = authHeader.slice(7);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
     // 用 access_token 获取用户信息
     const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -30,33 +31,71 @@ export async function POST(request: NextRequest) {
     if (!userRes.ok) {
       return NextResponse.json({ error: "登录已过期" }, { status: 401 });
     }
-    const { id: userId } = await userRes.json();
+    const userData = await userRes.json();
+    const userId = userData.id;
 
-    // 用 service_role 写入文章（绕过 RLS）
+    // 用 service_role 写入文章
     const insertRes = await fetch(`${supabaseUrl}/rest/v1/articles`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
         Prefer: "return=representation",
       },
       body: JSON.stringify({
         title,
         content,
         category,
+        published: true,
         author_id: userId,
       }),
     });
 
     if (!insertRes.ok) {
-      const err = await insertRes.text();
-      return NextResponse.json({ error: "发布失败: " + err }, { status: 500 });
+      const errText = await insertRes.text();
+      console.error("Article insert failed:", errText);
+      return NextResponse.json({ error: "发布失败" }, { status: 500 });
     }
 
-    const [article] = await insertRes.json();
-    return NextResponse.json({ id: article.id }, { status: 201 });
+    // Supabase return=representation 返回数组或单个对象
+    const inserted = await insertRes.json();
+    let articleId: string;
+
+    if (Array.isArray(inserted) && inserted.length > 0) {
+      articleId = inserted[0].id;
+    } else if (inserted && inserted.id) {
+      articleId = inserted.id;
+    } else {
+      // 降级：根据 response header 里的 Location 获取 id
+      const location = insertRes.headers.get("location");
+      if (location) {
+        console.log("Using Location header to extract id:", location);
+        articleId = location.split("/").pop()!;
+      } else {
+        console.error("Could not determine article id. Response:", JSON.stringify(inserted));
+        // 最后尝试：查最新文章
+        const latestRes = await fetch(
+          `${supabaseUrl}/rest/v1/articles?select=id&author_id=eq.${userId}&order=created_at.desc&limit=1`,
+          {
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+            },
+          }
+        );
+        const latest = await latestRes.json();
+        if (latest && latest.length > 0) {
+          articleId = latest[0].id;
+        } else {
+          return NextResponse.json({ error: "发布后无法获取文章ID" }, { status: 500 });
+        }
+      }
+    }
+
+    return NextResponse.json({ id: articleId }, { status: 201 });
   } catch (e: any) {
+    console.error("Article create error:", e);
     return NextResponse.json({ error: e.message || "服务器错误" }, { status: 500 });
   }
 }
