@@ -95,7 +95,10 @@ export function CommentsSection({ articleId }: { articleId: string }) {
           )}
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              setContent(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="写下你的想法…"
             rows={3}
             maxLength={2000}

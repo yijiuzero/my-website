@@ -34,9 +34,9 @@ export default function RegisterPage() {
         <div className="auth-card">
           <h1>🎉 注册成功</h1>
           <p className="auth-subtitle">
-            验证邮件已发送到 <strong>{email}</strong>
+            你的账号 <strong>{email}</strong> 已创建完成
             <br />
-            点击邮件中的链接完成验证，然后回来登录。
+            现在可以登录了
           </p>
           <Link href="/auth/login" className="auth-btn" style={{ display: "inline-block", textAlign: "center", marginTop: "1.5rem" }}>
             去登录

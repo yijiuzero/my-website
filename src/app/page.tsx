@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stripMarkdown } from "@/lib/markdown";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -292,7 +293,7 @@ export default async function Home() {
                     className="text-sm line-clamp-2 leading-relaxed"
                     style={{ color: "var(--fg-muted)" }}
                   >
-                    {article.content.slice(0, 160)}
+                    {stripMarkdown(article.content)}
                   </p>
                 )}
               </Link>

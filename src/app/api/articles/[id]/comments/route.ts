@@ -55,10 +55,19 @@ export async function POST(
 
     if (!insertRes.ok) {
       const err = await insertRes.text();
-      return NextResponse.json({ error: "评论失败: " + err }, { status: 500 });
+      console.error("Comment insert failed:", err);
+      return NextResponse.json({ error: "评论失败" }, { status: 500 });
     }
 
-    const [comment] = await insertRes.json();
+    const inserted = await insertRes.json();
+    let comment: Record<string, unknown>;
+    if (Array.isArray(inserted) && inserted.length > 0) {
+      comment = inserted[0];
+    } else if (inserted && inserted.id) {
+      comment = inserted;
+    } else {
+      comment = { id: "unknown" };
+    }
     return NextResponse.json(comment, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "服务器错误" }, { status: 500 });

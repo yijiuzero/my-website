@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/CommentsSection";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -121,22 +122,7 @@ export default async function ArticlePage({
           style={{ borderBottom: `1px solid var(--border)` }}
         >
           {article.content ? (
-            article.content.split("\n").map((line, i) => {
-              if (line.trim() === "") {
-                return <div key={i} className="h-3" />;
-              }
-              if (line.startsWith("## ")) {
-                return (
-                  <h2 key={i}>{line.replace("## ", "")}</h2>
-                );
-              }
-              if (line.startsWith("### ")) {
-                return (
-                  <h3 key={i}>{line.replace("### ", "")}</h3>
-                );
-              }
-              return <p key={i}>{line}</p>;
-            })
+            <MarkdownContent content={article.content} className="prose-station" />
           ) : (
             <p style={{ color: "var(--fg-muted)" }}>暂无内容</p>
           )}
