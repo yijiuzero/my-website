@@ -23,7 +23,7 @@ async function getArticles(): Promise<Article[]> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/articles?select=*&published=eq.true&order=created_at.desc`,
-      { headers, next: { revalidate: 60 } }
+      { headers, next: { revalidate: 0 } }
     );
     return res.ok ? res.json() : [];
   } catch {

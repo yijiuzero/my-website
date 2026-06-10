@@ -58,6 +58,7 @@ export default function NewArticlePage() {
       }
 
       router.push(`/article/${data.id}`);
+      router.refresh();
     } catch (e: any) {
       setError(e.message || "网络错误");
       setLoading(false);
