@@ -158,7 +158,7 @@ export default function NewArticlePage() {
           </button>
           <Link
             href="/articles"
-            className="px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="px-6 py-2.5 rounded-lg text-sm font-medium transition-all hover:opacity-80"
             style={{
               backgroundColor: "var(--surface)",
               color: "var(--fg-secondary)",
