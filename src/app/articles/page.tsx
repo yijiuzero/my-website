@@ -32,10 +32,13 @@ async function getArticles(): Promise<Article[]> {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("zh-CN", {
+  return new Date(dateStr).toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
 }
 
