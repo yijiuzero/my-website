@@ -3,14 +3,46 @@
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationBell } from "@/components/NotificationBell";
 import { useState, useRef, useEffect } from "react";
 
+interface Notification {
+  id: string;
+  type: string;
+  article_id: string;
+  read: boolean;
+  created_at: string;
+  articles?: { title: string };
+}
+
 function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, getToken, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // 通知状态
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) setNotifications(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  // 定时刷新未读数
+  useEffect(() => {
+    fetchNotifications();
+    if (!user) return;
+    const timer = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(timer);
+  }, [user]);
+
+  // 点击外部关闭
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -20,6 +52,29 @@ function UserMenu() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const markAllRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch { /* ignore */ }
+  };
+
+  const formatTime = (s: string) =>
+    new Date(s).toLocaleString("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const handleToggle = () => {
+    if (!open) fetchNotifications();
+    setOpen(!open);
+  };
 
   if (!user) {
     return (
@@ -38,8 +93,8 @@ function UserMenu() {
   return (
     <div ref={menuRef} style={{ position: "relative" }}>
       <button
-        onClick={() => setOpen(!open)}
-        className="nav-link rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold transition-colors"
+        onClick={handleToggle}
+        className="nav-link rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold transition-colors relative"
         style={{
           color: "var(--fg)",
           backgroundColor: "var(--accent-soft)",
@@ -48,6 +103,21 @@ function UserMenu() {
         title={user.username || user.email}
       >
         {initial.toUpperCase()}
+        {/* 未读红点 */}
+        {unreadCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 rounded-full text-[10px] font-bold flex items-center justify-center leading-none"
+            style={{
+              backgroundColor: "#ef4444",
+              color: "white",
+              minWidth: "16px",
+              height: "16px",
+              padding: "0 3px",
+            }}
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -57,14 +127,17 @@ function UserMenu() {
             position: "absolute",
             right: 0,
             top: "calc(100% + 6px)",
-            minWidth: "160px",
+            width: "300px",
+            maxHeight: "380px",
+            overflowY: "auto",
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: "10px",
             padding: "0.4rem",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
           }}
         >
+          {/* 用户信息 */}
           <div
             style={{
               padding: "0.5rem 0.75rem",
@@ -77,6 +150,71 @@ function UserMenu() {
           >
             {user.username || user.email}
           </div>
+
+          {/* 通知列表 */}
+          {notifications.length > 0 && (
+            <div style={{ borderBottom: "1px solid var(--border)", marginBottom: "0.25rem", paddingBottom: "0.25rem" }}>
+              <div
+                className="flex items-center justify-between px-2 py-1.5"
+              >
+                <span className="text-xs font-semibold" style={{ color: "var(--fg-muted)" }}>
+                  通知 {unreadCount > 0 && `(${unreadCount})`}
+                </span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    className="text-xs hover:underline"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    全部已读
+                  </button>
+                )}
+              </div>
+              <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                {notifications.slice(0, 5).map((n) => (
+                  <Link
+                    key={n.id}
+                    href={`/article/${n.article_id}`}
+                    onClick={() => setOpen(false)}
+                    className="block px-2 py-2 rounded-md transition-colors"
+                    style={{
+                      backgroundColor: n.read ? "transparent" : "color-mix(in srgb, var(--accent) 4%, transparent)",
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      {!n.read && (
+                        <div
+                          className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: "var(--accent)" }}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs" style={{ color: "var(--fg-muted)" }}>
+                          有人回复了你的评论
+                        </p>
+                        <p className="text-xs font-medium mt-0.5 truncate" style={{ color: "var(--fg)" }}>
+                          {n.articles?.title || "查看详情"}
+                        </p>
+                        <p className="text-[11px] mt-0.5" style={{ color: "var(--fg-muted)" }}>
+                          {formatTime(n.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 操作菜单 */}
+          <Link
+            href="/auth/account"
+            onClick={() => setOpen(false)}
+            className="nav-link block w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors"
+            style={{ color: "var(--fg-secondary)" }}
+          >
+            账号管理
+          </Link>
           <button
             onClick={() => { logout(); setOpen(false); }}
             className="nav-link w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors"
@@ -117,7 +255,6 @@ function NavLinks() {
           写文章
         </Link>
       )}
-      <NotificationBell />
       <ThemeToggle />
       <UserMenu />
     </nav>
@@ -134,7 +271,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           color: "var(--fg)",
         }}
       >
-        {/* ── 导航 ── */}
         <header
           className="sticky top-0 z-50 border-b"
           style={{
@@ -158,7 +294,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1">{children}</main>
 
-        {/* ── 底部 ── */}
         <footer
           className="border-t py-8 text-center text-sm"
           style={{
