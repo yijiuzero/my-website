@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export default function AccountPage() {
-  const { user, getToken, loading } = useAuth();
+  const { user, getToken, updateUser, loading } = useAuth();
   const router = useRouter();
 
   // 用户名
@@ -47,13 +47,7 @@ export default function AccountPage() {
       const data = await res.json();
       if (res.ok) {
         setUsernameMsg("用户名已更新");
-        // 更新本地存储
-        const raw = localStorage.getItem("sb-session");
-        if (raw) {
-          const session = JSON.parse(raw);
-          session.user.username = data.username || trimmed;
-          localStorage.setItem("sb-session", JSON.stringify(session));
-        }
+        updateUser({ username: data.username || trimmed });
       } else {
         setUsernameMsg(data.error || "修改失败");
       }

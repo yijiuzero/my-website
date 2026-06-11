@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   getToken: () => string | null;
+  updateUser: (patch: Partial<Pick<User, "username" | "avatar_url">>) => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   register: (email: string, password: string, username: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   getToken: () => null,
+  updateUser: () => {},
   login: async () => ({ ok: false }),
   register: async () => ({ ok: false }),
   logout: async () => {},
@@ -152,6 +154,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return stored?.access_token || null;
   }, []);
 
+  const updateUser = useCallback((patch: Partial<Pick<User, "username" | "avatar_url">>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    // 同步更新 localStorage 中的 user
+    const raw = localStorage.getItem("sb-session");
+    if (raw) {
+      const session = JSON.parse(raw);
+      session.user = { ...session.user, ...patch };
+      localStorage.setItem("sb-session", JSON.stringify(session));
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     const stored = getStoredSession();
     if (stored?.access_token) {
@@ -165,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, getToken, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, getToken, updateUser, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -70,15 +70,19 @@ export async function POST(
       comment = { id: "unknown" };
     }
 
-    // 如果是回复，给被回复者创建通知
+    // 如果是回复，校验 parent_id 并给被回复者创建通知
     if (parent_id) {
       try {
         const parentRes = await fetch(
-          `${supabaseUrl}/rest/v1/comments?id=eq.${parent_id}&select=author_id`,
+          `${supabaseUrl}/rest/v1/comments?id=eq.${parent_id}&select=author_id,article_id`,
           { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}` } }
         );
         const [parentComment] = await parentRes.json();
-        if (parentComment && parentComment.author_id !== userId) {
+        // 校验：父评论必须存在且属于同一篇文章
+        if (!parentComment || parentComment.article_id !== articleId) {
+          return NextResponse.json({ error: "被回复的评论不存在" }, { status: 400 });
+        }
+        if (parentComment.author_id !== userId) {
           await fetch(`${supabaseUrl}/rest/v1/notifications`, {
             method: "POST",
             headers: {
