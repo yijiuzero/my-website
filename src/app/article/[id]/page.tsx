@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/CommentsSection";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { stripMarkdown } from "@/lib/markdown";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -48,6 +50,44 @@ function formatDate(dateStr: string) {
 function estimateReadTime(content: string): number {
   const chars = content.replace(/\s/g, "").length;
   return Math.max(1, Math.ceil(chars / 500));
+}
+
+function truncate(str: string, max: number) {
+  const s = str.replace(/\s+/g, " ").trim();
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const article = await getArticle(id);
+  if (!article) {
+    return { title: "404 · 零号站台" };
+  }
+  const plain = truncate(stripMarkdown(article.content || ""), 160);
+  const title = `${article.title} · 零号站台`;
+  return {
+    title,
+    description: plain,
+    alternates: { canonical: `https://www.121338.xyz/article/${id}` },
+    openGraph: {
+      title,
+      description: plain,
+      url: `https://www.121338.xyz/article/${id}`,
+      siteName: "零号站台 · Platform Zero",
+      locale: "zh_CN",
+      type: "article",
+      publishedTime: article.created_at,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description: plain,
+    },
+  };
 }
 
 const categoryLabel: Record<string, string> = {

@@ -49,9 +49,25 @@ const categoryLabel: Record<string, string> = {
   essay: "随笔",
 };
 
-export const metadata = {
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
   title: "站台日志 · 零号站台",
-  description: "所有文章",
+  description: "阅读零号站台的所有文章：技术、随笔、生活。",
+  alternates: { canonical: "https://www.121338.xyz/articles" },
+  openGraph: {
+    title: "站台日志 · 零号站台",
+    description: "阅读零号站台的所有文章：技术、随笔、生活。",
+    url: "https://www.121338.xyz/articles",
+    siteName: "零号站台 · Platform Zero",
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "站台日志 · 零号站台",
+    description: "阅读零号站台的所有文章：技术、随笔、生活。",
+  },
 };
 
 export default async function ArticlesPage() {

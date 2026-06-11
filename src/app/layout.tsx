@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import "./globals.css";
@@ -13,9 +13,41 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://www.121338.xyz";
+const SITE_NAME = "零号站台 · Platform Zero";
+const SITE_DESC = "一个互联网上的落脚处。记录、分享、连接。";
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#1a1a1a" },
+  ],
+};
+
 export const metadata: Metadata = {
-  title: "零号站台 · Platform Zero",
-  description: "一个互联网上的落脚处。记录、分享、连接。",
+  title: SITE_NAME,
+  description: SITE_DESC,
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESC,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_NAME,
+    description: SITE_DESC,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -30,6 +62,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <link rel="preconnect" href="https://www.121338.xyz" />
+        <link rel="dns-prefetch" href="https://www.121338.xyz" />
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+        <link rel="preconnect" href="https://static.cloudflareinsights.com" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

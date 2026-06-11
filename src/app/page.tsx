@@ -1,5 +1,29 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { stripMarkdown } from "@/lib/markdown";
+
+const SITE_URL = "https://www.121338.xyz";
+const TITLE = "零号站台 · Platform Zero";
+const DESC = "一个互联网上的落脚处。记录、分享、连接。";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESC,
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    title: TITLE,
+    description: DESC,
+    url: SITE_URL,
+    siteName: TITLE,
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESC,
+  },
+};
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
