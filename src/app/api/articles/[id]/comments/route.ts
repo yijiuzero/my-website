@@ -69,6 +69,34 @@ export async function POST(
     } else {
       comment = { id: "unknown" };
     }
+
+    // 如果是回复，给被回复者创建通知
+    if (parent_id) {
+      try {
+        const parentRes = await fetch(
+          `${supabaseUrl}/rest/v1/comments?id=eq.${parent_id}&select=author_id`,
+          { headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!, Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}` } }
+        );
+        const [parentComment] = await parentRes.json();
+        if (parentComment && parentComment.author_id !== userId) {
+          await fetch(`${supabaseUrl}/rest/v1/notifications`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+            },
+            body: JSON.stringify({
+              user_id: parentComment.author_id,
+              type: "reply",
+              article_id: articleId,
+            }),
+          });
+        }
+      } catch {
+        // 通知失败不影响评论
+      }
+    }
     return NextResponse.json(comment, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "服务器错误" }, { status: 500 });

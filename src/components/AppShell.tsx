@@ -3,6 +3,7 @@
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useState, useRef, useEffect } from "react";
 
 function UserMenu() {
@@ -116,6 +117,7 @@ function NavLinks() {
           写文章
         </Link>
       )}
+      <NotificationBell />
       <ThemeToggle />
       <UserMenu />
     </nav>
