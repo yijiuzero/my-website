@@ -9,6 +9,7 @@ interface Comment {
   content: string;
   created_at: string;
   author_id: string;
+  parent_id: string | null;
   users?: {
     username: string;
     avatar_url: string | null;
@@ -25,6 +26,196 @@ function formatTime(dateStr: string) {
   });
 }
 
+/* ── 单条评论组件 ── */
+function CommentItem({
+  comment,
+  replies,
+  replyingTo,
+  onReply,
+  onCancelReply,
+  replyLoading,
+  replyContent,
+  onReplyContentChange,
+  onReplySubmit,
+  allComments,
+}: {
+  comment: Comment;
+  replies: Comment[];
+  replyingTo: string | null;
+  onReply: (id: string) => void;
+  onCancelReply: () => void;
+  replyLoading: boolean;
+  replyContent: string;
+  onReplyContentChange: (v: string) => void;
+  onReplySubmit: (e: React.FormEvent) => void;
+  allComments: Comment[];
+}) {
+  const { user } = useAuth();
+  const parentAuthor = comment.parent_id
+    ? allComments.find((c) => c.id === comment.parent_id)?.users?.username
+    : null;
+
+  return (
+    <div>
+      {/* 回复了别人的提示 */}
+      {parentAuthor && (
+        <div
+          className="text-xs mb-1 ml-1"
+          style={{ color: "var(--fg-muted)" }}
+        >
+          回复 <span style={{ color: "var(--accent)" }}>@{parentAuthor}</span>
+        </div>
+      )}
+
+      <div
+        className="rounded-xl border p-5 animate-fade-up"
+        style={{
+          borderColor: "var(--border)",
+          backgroundColor: "var(--surface)",
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+            style={{
+              backgroundColor: "var(--accent-soft)",
+              color: "var(--accent)",
+            }}
+          >
+            {(comment.users?.username || "匿").charAt(0)}
+          </div>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--fg)" }}
+          >
+            {comment.users?.username || "匿名"}
+          </span>
+          <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+            {formatTime(comment.created_at)}
+          </span>
+        </div>
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: "var(--fg-secondary)" }}
+        >
+          {comment.content}
+        </p>
+
+        {/* 回复按钮 */}
+        {user && !comment.parent_id && (
+          <button
+            onClick={() => onReply(comment.id)}
+            className="text-xs mt-2 hover:underline"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            回复
+          </button>
+        )}
+      </div>
+
+      {/* 子回复列表 */}
+      {replies.length > 0 && (
+        <div className="ml-8 mt-2 space-y-2 border-l-2 pl-4" style={{ borderColor: "var(--border)" }}>
+          {replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              replies={[]}
+              replyingTo={replyingTo}
+              onReply={onReply}
+              onCancelReply={onCancelReply}
+              replyLoading={replyLoading}
+              replyContent={replyContent}
+              onReplyContentChange={onReplyContentChange}
+              onReplySubmit={onReplySubmit}
+              allComments={allComments}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 当前评论的回复表单 */}
+      {replyingTo === comment.id && (
+        <div className="ml-8 mt-2 border-l-2 pl-4" style={{ borderColor: "var(--border)" }}>
+          <ReplyForm
+            loading={replyLoading}
+            content={replyContent}
+            onChange={onReplyContentChange}
+            onSubmit={onReplySubmit}
+            onCancel={onCancelReply}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── 回复表单子组件 ── */
+function ReplyForm({
+  loading,
+  content,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  loading: boolean;
+  content: string;
+  onChange: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="mt-2">
+      <textarea
+        value={content}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="写下你的回复…"
+        rows={2}
+        maxLength={2000}
+        className="w-full px-3 py-2 rounded-lg border resize-y text-sm"
+        style={{
+          backgroundColor: "var(--bg)",
+          borderColor: "var(--border)",
+          color: "var(--fg)",
+          lineHeight: 1.6,
+        }}
+      />
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-xs" style={{ color: "var(--fg-muted)" }}>
+          {content.length}/2000
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              color: "var(--fg-muted)",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            disabled={loading || !content.trim()}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{
+              backgroundColor: content.trim() ? "var(--accent)" : "var(--border)",
+              color: content.trim() ? "white" : "var(--fg-muted)",
+              cursor: content.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            {loading ? "发送中…" : "回复"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/* ── 主评论区块 ── */
 export function CommentsSection({ articleId }: { articleId: string }) {
   const { user, getToken } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -32,6 +223,11 @@ export function CommentsSection({ articleId }: { articleId: string }) {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+
+  // 回复状态
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
 
   const fetchComments = useCallback(async () => {
     try {
@@ -73,13 +269,53 @@ export function CommentsSection({ articleId }: { articleId: string }) {
       }
 
       setContent("");
-      await fetchComments(); // 刷新评论列表
+      await fetchComments();
     } catch (e: any) {
       setError(e.message || "网络错误");
     } finally {
       setLoading(false);
     }
   };
+
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyContent.trim() || !replyingTo) return;
+    setReplyLoading(true);
+
+    try {
+      const res = await fetch(`/api/articles/${articleId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          content: replyContent.trim(),
+          parent_id: replyingTo,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "回复失败");
+        setReplyLoading(false);
+        return;
+      }
+
+      setReplyContent("");
+      setReplyingTo(null);
+      await fetchComments();
+    } catch (e: any) {
+      setError(e.message || "网络错误");
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  // 分组：顶层评论 + 子回复
+  const topLevel = comments.filter((c) => !c.parent_id);
+  const getReplies = (parentId: string) =>
+    comments.filter((c) => c.parent_id === parentId);
 
   return (
     <section>
@@ -93,7 +329,7 @@ export function CommentsSection({ articleId }: { articleId: string }) {
       {/* 评论表单 */}
       {user ? (
         <form onSubmit={handleSubmit} className="mb-8">
-          {error && (
+          {error && !replyingTo && (
             <div className="auth-error mb-3">{error}</div>
           )}
           <textarea
@@ -198,45 +434,23 @@ export function CommentsSection({ articleId }: { articleId: string }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {comments.map((comment) => (
-            <div
+          {topLevel.map((comment) => (
+            <CommentItem
               key={comment.id}
-              className="rounded-xl border p-5 animate-fade-up"
-              style={{
-                borderColor: "var(--border)",
-                backgroundColor: "var(--surface)",
+              comment={comment}
+              replies={getReplies(comment.id)}
+              replyingTo={replyingTo}
+              onReply={setReplyingTo}
+              onCancelReply={() => {
+                setReplyingTo(null);
+                setReplyContent("");
               }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                  style={{
-                    backgroundColor: "var(--accent-soft)",
-                    color: "var(--accent)",
-                  }}
-                >
-                  {(comment.users?.username || "匿").charAt(0)}
-                </div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: "var(--fg)" }}
-                >
-                  {comment.users?.username || "匿名"}
-                </span>
-                <span
-                  className="text-xs"
-                  style={{ color: "var(--fg-muted)" }}
-                >
-                  {formatTime(comment.created_at)}
-                </span>
-              </div>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "var(--fg-secondary)" }}
-              >
-                {comment.content}
-              </p>
-            </div>
+              replyLoading={replyLoading}
+              replyContent={replyContent}
+              onReplyContentChange={setReplyContent}
+              onReplySubmit={handleReplySubmit}
+              allComments={comments}
+            />
           ))}
         </div>
       )}

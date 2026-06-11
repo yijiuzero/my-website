@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const { id: articleId } = await params;
-    const { content } = await request.json();
+    const { content, parent_id } = await request.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json({ error: "评论内容不能为空" }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(
         article_id: articleId,
         author_id: userId,
         content: content.trim(),
+        ...(parent_id ? { parent_id } : {}),
       }),
     });
 
@@ -85,7 +86,7 @@ export async function GET(
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/comments?article_id=eq.${articleId}&select=id,content,created_at,author_id,users(username,avatar_url)&order=created_at.asc`,
+      `${supabaseUrl}/rest/v1/comments?article_id=eq.${articleId}&select=id,content,created_at,author_id,parent_id,users(username,avatar_url)&order=created_at.asc`,
       {
         headers: {
           apikey: key,
