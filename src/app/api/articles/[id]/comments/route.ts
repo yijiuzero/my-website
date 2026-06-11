@@ -95,11 +95,16 @@ export async function GET(
     );
 
     if (!res.ok) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], {
+        status: 200,
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
     }
 
     const comments = await res.json();
-    return NextResponse.json(comments);
+    return NextResponse.json(comments, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
   } catch (e: any) {
     return NextResponse.json([], { status: 200 });
   }
