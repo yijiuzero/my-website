@@ -30,7 +30,7 @@ async function getArticles(): Promise<Article[]> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/articles?select=*&published=eq.true&order=created_at.desc&limit=6`,
-      { headers, next: { revalidate: 0 } }
+      { headers, next: { revalidate: 60, tags: ["articles"] } }
     );
     return res.ok ? res.json() : [];
   } catch {
@@ -43,7 +43,7 @@ async function getLinks(): Promise<LinkItem[]> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/links?select=*&order=sort_order.asc`,
-      { headers, next: { revalidate: 0 } }
+      { headers, next: { revalidate: 60, tags: ["links"] } }
     );
     return res.ok ? res.json() : [];
   } catch {

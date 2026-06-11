@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,6 +92,12 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "发布后无法获取文章ID" }, { status: 500 });
         }
       }
+    }
+
+    // 刷新首页、列表页缓存
+    revalidateTag("articles", {});
+    if (articleId) {
+      revalidatePath(`/article/${articleId}`);
     }
 
     return NextResponse.json({ id: articleId }, { status: 201 });

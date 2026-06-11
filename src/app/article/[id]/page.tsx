@@ -25,7 +25,7 @@ async function getArticle(id: string): Promise<Article | null> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/articles?id=eq.${id}&select=*`,
-      { headers }
+      { headers, next: { revalidate: 300 } }
     );
     const data = await res.json();
     return data[0] || null;
