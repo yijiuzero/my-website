@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, username } = await request.json();
+    const { email, password, username, captchaToken } = await request.json();
 
     if (!email || !password || !username) {
       return NextResponse.json({ error: "请填写所有字段" }, { status: 400 });
+    }
+
+    // 校验 Turnstile
+    const valid = await verifyTurnstile(captchaToken);
+    if (!valid) {
+      return NextResponse.json({ error: "人机验证未通过，请重试" }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

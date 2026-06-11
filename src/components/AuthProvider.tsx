@@ -14,8 +14,8 @@ interface AuthState {
   loading: boolean;
   getToken: () => string | null;
   updateUser: (patch: Partial<Pick<User, "username" | "avatar_url">>) => void;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (email: string, password: string, username: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string, captchaToken?: string) => Promise<{ ok: boolean; error?: string }>;
+  register: (email: string, password: string, username: string, captchaToken?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -49,15 +49,6 @@ function getStoredSession() {
     localStorage.removeItem("sb-session");
     return null;
   }
-}
-
-async function fetchProfile(userId: string, accessToken: string) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=username,avatar_url`,
-    { headers: { apikey: ANON_KEY, Authorization: `Bearer ${accessToken}` } }
-  );
-  const users = await res.json();
-  return users?.[0] || null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -95,24 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, captchaToken?: string) => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
-        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, captchaToken: captchaToken || "" }),
       });
       const data = await res.json();
       if (!res.ok) {
-        return { ok: false, error: data.error_description || data.msg || "登录失败" };
+        return { ok: false, error: data.error || "登录失败" };
       }
 
-      const profile = await fetchProfile(data.user.id, data.access_token);
       const userObj: User = {
         id: data.user.id,
         email: data.user.email || email,
-        username: profile?.username,
-        avatar_url: profile?.avatar_url,
+        username: data.user?.username,
+        avatar_url: data.user?.avatar_url,
       };
 
       const expires_at = Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
@@ -132,12 +122,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (email: string, password: string, username: string) => {
+  const register = useCallback(async (email: string, password: string, username: string, captchaToken?: string) => {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, username }),
+        body: JSON.stringify({ email, password, username, captchaToken: captchaToken || "" }),
       });
       const data = await res.json();
       if (!res.ok) {
