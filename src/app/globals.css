@@ -11,17 +11,20 @@
 }
 
 :root {
-  --bg: #fafaf8;
+  --bg: #faf9f6;
   --fg: #1c1917;
   --fg-secondary: #57534e;
   --fg-muted: #a8a29e;
   --surface: #ffffff;
-  --surface-raised: #fafaf9;
+  --surface-raised: #fefdfb;
   --border: #e7e5e4;
   --border-hover: #d6d3d1;
   --accent: #d97706;
   --accent-soft: rgba(217, 119, 6, 0.08);
   --accent-glow: rgba(217, 119, 6, 0.12);
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 4px 16px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.04);
+  --shadow-lg: 0 8px 32px rgba(28, 25, 23, 0.08), 0 2px 6px rgba(28, 25, 23, 0.04);
 
   color-scheme: light;
   background-color: var(--bg);
@@ -29,7 +32,7 @@
 }
 
 /* 暗色模式 - 跟随系统 */
-@media (prefers-color-scheme: dark) {
+  @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --bg: #0f0d0b;
     --fg: #fafaf9;
@@ -42,6 +45,12 @@
     --accent: #f59e0b;
     --accent-soft: rgba(245, 158, 11, 0.1);
     --accent-glow: rgba(245, 158, 11, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
 
     color-scheme: dark;
   }
@@ -188,18 +197,23 @@ html {
 
 /* ── 卡片 hover ── */
 .card-interactive {
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  box-shadow: var(--shadow-sm);
 }
 .card-interactive:hover {
   border-color: var(--border-hover) !important;
-  box-shadow: 0 1px 3px var(--accent-glow);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .site-card {
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  box-shadow: var(--shadow-sm);
 }
 .site-card:hover {
   border-color: var(--border-hover) !important;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* ── 动画 ── */
@@ -243,6 +257,7 @@ html {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
+  box-shadow: var(--shadow-md);
   animation: fade-up 0.4s ease-out both;
 }
 

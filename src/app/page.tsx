@@ -102,6 +102,10 @@ export default async function Home() {
       {/* ── Hero ── */}
       <section className="py-20 md:py-28 text-center">
         <div className="animate-fade-up">
+          <div
+            className="w-10 h-0.5 mx-auto mb-8"
+            style={{ backgroundColor: "var(--accent)" }}
+          />
           <h1
             className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4"
             style={{ color: "var(--fg)" }}
