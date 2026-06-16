@@ -33,6 +33,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "用户名最多 30 个字符" }, { status: 400 });
     }
 
+    // 检查用户名是否已被其他用户占用
+    const dupRes = await fetch(
+      `${supabaseUrl}/rest/v1/users?username=eq.${encodeURIComponent(trimmed)}&id=neq.${userId}&select=id`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (dupRes.ok) {
+      const dup = await dupRes.json();
+      if (dup.length > 0) {
+        return NextResponse.json({ error: "该用户名已被占用" }, { status: 409 });
+      }
+    }
+
     // 更新 users 表
     const updateRes = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${userId}`, {
       method: "PATCH",

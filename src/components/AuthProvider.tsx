@@ -51,40 +51,73 @@ function getStoredSession() {
   }
 }
 
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 分钟刷新一次
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 启动时恢复 session
+  // 刷新 token 的通用逻辑，返回是否成功
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    const raw = localStorage.getItem("sb-session");
+    if (!raw) return false;
+    let stored: Record<string, unknown>;
+    try {
+      stored = JSON.parse(raw);
+    } catch {
+      return false;
+    }
+    const refreshToken = stored.refresh_token as string;
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        }
+      );
+      const data = await res.json();
+      if (!data.access_token) return false;
+      const expires_at =
+        Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
+      localStorage.setItem(
+        "sb-session",
+        JSON.stringify({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || refreshToken,
+          expires_at,
+          user: stored.user,
+        })
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // 启动时恢复 session + 定时刷新
   useEffect(() => {
     const stored = getStoredSession();
     if (stored) {
       setUser(stored.user);
-      // 后台刷新 token
-      fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON_KEY },
-        body: JSON.stringify({ refresh_token: stored.refresh_token }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.access_token) {
-            const expires_at = Math.floor(Date.now() / 1000) + (data.expires_in || 3600);
-            localStorage.setItem(
-              "sb-session",
-              JSON.stringify({
-                access_token: data.access_token,
-                refresh_token: data.refresh_token || stored.refresh_token,
-                expires_at,
-                user: stored.user,
-              })
-            );
-          }
-        })
-        .catch(() => {});
+      // 首次后台刷新
+      refreshSession();
     }
     setLoading(false);
-  }, []);
+
+    // 定时刷新，失败则登出
+    const timer = window.setInterval(async () => {
+      const ok = await refreshSession();
+      if (!ok) {
+        localStorage.removeItem("sb-session");
+        setUser(null);
+      }
+    }, REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [refreshSession]);
 
   const login = useCallback(async (email: string, password: string, captchaToken?: string) => {
     try {

@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 
 declare global {
   interface Window {
@@ -32,13 +32,20 @@ interface Props {
  * 仅在 NEXT_PUBLIC_TURNSTILE_SITE_KEY 存在时渲染。
  */
 export function TurnstileWidget({ onVerify, onExpire }: Props) {
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const callbackRef = useRef(onVerify);
   callbackRef.current = onVerify;
   const [ready, setReady] = useState(false);
 
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  // 未配置 site key 时，自动放行（通知父组件无需等待验证）
+  useEffect(() => {
+    if (!siteKey) onVerify("__turnstile_disabled__");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!siteKey) return null;
 
   const render = useCallback(() => {
     if (!containerRef.current || !siteKey) return;

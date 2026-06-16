@@ -18,6 +18,24 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+    // 校验用户名长度和格式
+    const trimmedUsername = username.trim();
+    if (trimmedUsername.length < 2 || trimmedUsername.length > 24) {
+      return NextResponse.json({ error: "用户名需要 2-24 个字符" }, { status: 400 });
+    }
+
+    // 检查用户名是否已存在
+    const dupRes = await fetch(
+      `${supabaseUrl}/rest/v1/users?username=eq.${encodeURIComponent(trimmedUsername)}&select=id`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    );
+    if (dupRes.ok) {
+      const dup = await dupRes.json();
+      if (dup.length > 0) {
+        return NextResponse.json({ error: "该用户名已被占用" }, { status: 409 });
+      }
+    }
+
     // 1. 注册 auth 用户
     const signupRes = await fetch(`${supabaseUrl}/auth/v1/signup`, {
       method: "POST",
@@ -49,7 +67,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${serviceKey}`,
           Prefer: "return=minimal",
         },
-        body: JSON.stringify({ id: userId, username, avatar_url: null }),
+        body: JSON.stringify({ id: userId, username: trimmedUsername, avatar_url: null }),
       });
     }
 

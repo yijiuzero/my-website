@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { stripMarkdown } from "@/lib/markdown";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const PAGE_SIZE = 20;
 
 const headers = {
   apikey: SUPABASE_ANON_KEY || "",
@@ -18,16 +20,30 @@ interface Article {
   created_at: string;
 }
 
-async function getArticles(): Promise<Article[]> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+async function getArticles(
+  page: number
+): Promise<{ articles: Article[]; total: number }> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { articles: [], total: 0 };
   try {
+    const offset = (page - 1) * PAGE_SIZE;
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/articles?select=*&published=eq.true&order=created_at.desc`,
-      { headers, next: { revalidate: 60, tags: ["articles"] } }
+      `${SUPABASE_URL}/rest/v1/articles?select=*&published=eq.true&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`,
+      {
+        headers: { ...headers, Prefer: "count=exact" },
+        next: { revalidate: 60, tags: ["articles"] },
+      }
     );
-    return res.ok ? res.json() : [];
+    if (!res.ok) return { articles: [], total: 0 };
+    const articles: Article[] = await res.json();
+    const contentRange = res.headers.get("content-range");
+    let total = articles.length;
+    if (contentRange) {
+      const match = contentRange.match(/\/(\d+)$/);
+      if (match) total = parseInt(match[1], 10);
+    }
+    return { articles, total };
   } catch {
-    return [];
+    return { articles: [], total: 0 };
   }
 }
 
@@ -49,8 +65,6 @@ const categoryLabel: Record<string, string> = {
   essay: "随笔",
 };
 
-import type { Metadata } from "next";
-
 export const metadata: Metadata = {
   title: "站台日志 · 零号站台",
   description: "阅读零号站台的所有文章：技术、随笔、生活。",
@@ -70,8 +84,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function ArticlesPage() {
-  const articles = await getArticles();
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(String(pageParam || "1"), 10) || 1);
+  const { articles, total } = await getArticles(currentPage);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="max-w-3xl mx-auto px-5 py-8 md:py-12">
@@ -101,7 +122,7 @@ export default async function ArticlesPage() {
         className="text-sm mb-10"
         style={{ color: "var(--fg-muted)" }}
       >
-        共 {articles.length} 篇文章
+        共 {total} 篇文章
       </p>
 
       {/* ── 列表 ── */}
@@ -166,6 +187,44 @@ export default async function ArticlesPage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {/* ── 分页 ── */}
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-center gap-2 mt-10">
+          {currentPage > 1 && (
+            <Link
+              href={`/articles?page=${currentPage - 1}`}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--fg-secondary)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              上一页
+            </Link>
+          )}
+          <span
+            className="px-4 py-2 text-sm"
+            style={{ color: "var(--fg-muted)" }}
+          >
+            {currentPage} / {totalPages}
+          </span>
+          {currentPage < totalPages && (
+            <Link
+              href={`/articles?page=${currentPage + 1}`}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: "var(--surface)",
+                color: "var(--fg-secondary)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              下一页
+            </Link>
+          )}
+        </nav>
       )}
     </div>
   );
