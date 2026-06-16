@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { TurnstileWidget } from "@/components/TurnstileWidget";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -11,19 +10,14 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captchaToken) {
-      setError("请完成人机验证");
-      return;
-    }
     setError("");
     setLoading(true);
-    const result = await login(email, password, captchaToken);
+    const result = await login(email, password);
     setLoading(false);
     if (result.ok) {
       router.push("/");
@@ -66,17 +60,12 @@ export default function LoginPage() {
             />
           </label>
 
-          <TurnstileWidget
-            onVerify={(token) => setCaptchaToken(token)}
-            onExpire={() => setCaptchaToken("")}
-          />
-
           <button
             type="submit"
             className="auth-btn"
-            disabled={loading || !captchaToken}
+            disabled={loading}
           >
-            {loading ? "登录中…" : !captchaToken ? "请先完成验证" : "登录"}
+            {loading ? "登录中…" : "登录"}
           </button>
         </form>
 

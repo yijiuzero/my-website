@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyTurnstile } from "@/lib/turnstile";
 
-// POST /api/auth/login — 带 Turnstile 验证的登录
+// POST /api/auth/login
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, captchaToken } = await request.json();
+    const { email, password } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: "请填写邮箱和密码" }, { status: 400 });
-    }
-
-    // 校验 Turnstile
-    const valid = await verifyTurnstile(captchaToken);
-    if (!valid) {
-      return NextResponse.json({ error: "人机验证未通过，请重试" }, { status: 400 });
     }
 
     // 调用 Supabase Auth
